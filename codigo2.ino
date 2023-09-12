@@ -2,6 +2,7 @@
 #include <EEPROM.h>
 #include <dht.h>
 #include <RTClib.h>
+#include <Wire.h>
 LiquidCrystal lcd(12, 11, 10, 5, 4, 3, 2);
 
 dht DHT;
@@ -51,9 +52,9 @@ byte rostodir[8] = {
 
 void setup()
 {
-    lcd.createChar(1, feliz);
-   lcd.createChar(2, rosto);
-   lcd.createChar(3, rostodir);
+  lcd.createChar(1, feliz);
+  lcd.createChar(2, rosto);
+  lcd.createChar(3, rostodir);
   
   Serial.begin(9600);
   
@@ -63,20 +64,21 @@ void setup()
   pinMode(sonoro, OUTPUT);
   Serial.begin(9600);
   lcd.begin(16,2);
+  Wire.begin();
+  rtc.begin();
   
-  lcd.print("  +Bem Vindo!+");
+  lcd.print("+Bem Vindo!+");
   
   lcd.setCursor(7,2);
-   lcd.write(byte(2));
-   lcd.setCursor(8,2);
-   lcd.write(byte(1));
-   lcd.setCursor(9,2);
-   lcd.write(byte(3));
+  lcd.write(byte(2));
+  lcd.setCursor(8,2);
+  lcd.write(byte(1));
+  lcd.setCursor(9,2);
+  lcd.write(byte(3));
   
   delay(1000);
-   for(int posi_LCD = 0; posi_LCD < 50; posi_LCD ++)
+  for(int posi_LCD = 0; posi_LCD < 50; posi_LCD ++)
   {
-     
     lcd.setCursor(16,1);
     lcd.scrollDisplayLeft(); //Essa é a função que faz as letras se deslocarem
 
@@ -90,27 +92,24 @@ void setup()
   lcd.setCursor(0,0);
   lcd.print("Lum:");
   lcd.setCursor(6,0);
-  lcd.print(EEPROM.read(mediaLuminosidade));
   lcd.print("%");   
   
   lcd.setCursor(0,1);
   lcd.print("Tmp:");
   lcd.setCursor(9,1);
-  lcd.print(EEPROM.read(mediaTemperatura));
   lcd.print("C"); 
 
   lcd.setCursor(9,0);
   lcd.print("Umi:");
   lcd.setCursor(15,0);
-  lcd.print(EEPROM.read(mediaUmidade));
   lcd.print("%"); 
 }
 
 void loop()
 {
-
   //Declaração das variaveis
-
+  Wire.beginTransmission(4);
+  byte x = 0;
   int valoresLuminosidade[5] = {};
   int valoresUmidade[5] = {};
   int valoresTemperatura[5] = {};
@@ -119,6 +118,7 @@ void loop()
   int somaLuminosidade = 0;
   int somaUmidade = 0;
   int somaTemperatura = 0;
+  
  
   DHT.read11(A0);
   delay(1000);
@@ -161,6 +161,9 @@ void loop()
       digitalWrite(LedTempBaixa, LOW);
       digitalWrite(LedTempAlta, HIGH);
       tone(6, 800, 1000);
+      Wire.write(mediaTemperatura);
+      Wire.write(mediaUmidade);
+      Wire.write(mediaLuminosidade);
       EEPROM.write(enderecoEEPROM, mediaTemperatura);
       EEPROM.write(enderecoEEPROM, mediaUmidade);
       EEPROM.write(enderecoEEPROM, mediaLuminosidade);
@@ -169,6 +172,9 @@ void loop()
       digitalWrite(LedTempBaixa, HIGH);
       digitalWrite(LedTempAlta, LOW);
       tone(6, 800, 1000);
+      Wire.write(mediaTemperatura);
+      Wire.write(mediaUmidade);
+      Wire.write(mediaLuminosidade);
       EEPROM.write(enderecoEEPROM, mediaTemperatura);
       EEPROM.write(enderecoEEPROM, mediaUmidade);
       EEPROM.write(enderecoEEPROM, mediaLuminosidade);
