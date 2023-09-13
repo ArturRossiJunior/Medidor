@@ -10,8 +10,8 @@ RTC_DS3231 rtc;
 
 int SensorLuminosidade = A5;
 int SensorUmidade = A0;
-int enderecoEEPROM = A1;
-int sonoro = 6;
+int enderecoEEPROM;
+const int BUZZER_PIN = 6;
 int LedTempAlta = 7;
 int LedTempBaixa = 8;
 
@@ -61,10 +61,10 @@ void setup()
   // Informa se os pinos dos LEDs são de entrada ou saída
   pinMode(LedTempBaixa, OUTPUT);  
   pinMode(LedTempAlta, OUTPUT);
-  pinMode(sonoro, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
   Serial.begin(9600);
   lcd.begin(16,2);
-  Wire.begin();
+  //Wire.begin();
   rtc.begin();
   
   lcd.print("+Bem Vindo!+");
@@ -91,25 +91,35 @@ void setup()
 
   lcd.setCursor(0,0);
   lcd.print("Lum:");
+  lcd.setCursor(4, 0);
+  lcd.print("0");
   lcd.setCursor(6,0);
   lcd.print("%");   
   
   lcd.setCursor(0,1);
   lcd.print("Tmp:");
-  lcd.setCursor(9,1);
+  lcd.setCursor(4, 1); 
+  lcd.print(mediaTemperatura);
+  lcd.setCursor(6,1);
   lcd.print("C"); 
 
   lcd.setCursor(9,0);
   lcd.print("Umi:");
+  lcd.setCursor(13,0);
+  lcd.print("0");
   lcd.setCursor(15,0);
-  lcd.print("%"); 
+  lcd.print("%");
 }
 
 void loop()
 {
+
+  //limpar eeprom
+  for (int i = 0; i < 1024; i++){
+    EEPROM.write(i, 0);
+  }
+
   //Declaração das variaveis
-  Wire.beginTransmission(4);
-  byte x = 0;
   int valoresLuminosidade[5] = {};
   int valoresUmidade[5] = {};
   int valoresTemperatura[5] = {};
@@ -119,7 +129,6 @@ void loop()
   int somaUmidade = 0;
   int somaTemperatura = 0;
   
- 
   DHT.read11(A0);
   delay(1000);
   lcd.noDisplay();
@@ -149,10 +158,10 @@ void loop()
    lcd.setCursor(4, 0);
    lcd.print(mediaLuminosidade);
 
-   lcd.setCursor(12,0);
+   lcd.setCursor(13,0);
    lcd.print(mediaUmidade);
 
-   lcd.setCursor(5, 1); 
+   lcd.setCursor(4, 1); 
    lcd.print(mediaTemperatura);
 
    //Validação dos niveis adequados
@@ -160,34 +169,44 @@ void loop()
   if (mediaTemperatura > 25 || mediaUmidade > 50 || mediaLuminosidade > 30) {
       digitalWrite(LedTempBaixa, LOW);
       digitalWrite(LedTempAlta, HIGH);
-      tone(6, 800, 1000);
-      Wire.write(mediaTemperatura);
-      Wire.write(mediaUmidade);
-      Wire.write(mediaLuminosidade);
-      EEPROM.write(enderecoEEPROM, mediaTemperatura);
-      EEPROM.write(enderecoEEPROM, mediaUmidade);
-      EEPROM.write(enderecoEEPROM, mediaLuminosidade);
+      
+      tone(BUZZER_PIN, 1000);
+      delay(2000);
+
+      // Pare o som por 100ms
+      noTone(BUZZER_PIN);
+      delay(100);
+    
+      String medias;
+      medias += String(mediaTemperatura)+"|";
+      medias += String(mediaUmidade)+"|";
+      medias += String(mediaLuminosidade)+"|";
+      for (unsigned long i = 0; i < 1024; i++){
+        EEPROM.write(i, medias[i]);
+      }
     }
     else if (mediaTemperatura < 15 || mediaUmidade < 30 || mediaLuminosidade < 0) {
       digitalWrite(LedTempBaixa, HIGH);
       digitalWrite(LedTempAlta, LOW);
-      tone(6, 800, 1000);
-      Wire.write(mediaTemperatura);
-      Wire.write(mediaUmidade);
-      Wire.write(mediaLuminosidade);
-      EEPROM.write(enderecoEEPROM, mediaTemperatura);
-      EEPROM.write(enderecoEEPROM, mediaUmidade);
-      EEPROM.write(enderecoEEPROM, mediaLuminosidade);
+      tone(6, 1000, 1000);
 
-      int sonoroState = digitalRead(6);
-      if(sonoroState == HIGH){
-        Serial.println("HIGH"); 
-      } else{
-        Serial.println("LOW");
+      String medias;
+      medias += String(mediaTemperatura)+"|";
+      medias += String(mediaUmidade)+"|";
+      medias += String(mediaLuminosidade)+"|";
+      
+      for (unsigned long i = 0; i < 1024; i++){
+        EEPROM.write(i, medias[i]);
       }
     }
     else {
       digitalWrite(LedTempBaixa, LOW);
       digitalWrite(LedTempAlta, LOW);
     }
+
+    String retorno;
+    for (unsigned long i = 0; i < 1024; i++){
+    retorno += (char)EEPROM.read(i);
+    }
+    Serial.print(retorno);
 }
